@@ -1,0 +1,8 @@
+VOTACIONES ESCUELA SARMIENTO - RESPALDO LIMPIO
+
+Esta copia conserva el proyecto y elimina archivos generados/pesados como node_modules.
+Para instalar las dependencias en una computadora nueva, usar:
+npm install
+
+Se normalizó el nombre de la hoja de estilos a style.css y se actualizaron sus referencias.
+No se modificó la lógica de la aplicación salvo esa limpieza de nombres/referencias.

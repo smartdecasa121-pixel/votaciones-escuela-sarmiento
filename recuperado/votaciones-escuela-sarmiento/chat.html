@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Chat - Votaciones Escuela Sarmiento</title>
+
+    <link rel="stylesheet"
+          href="css/style.css">
+
+</head>
+
+<body>
+
+    <header>
+
+        <h1>Chat Escuela Sarmiento</h1>
+
+    </header>
+
+
+    <main>
+
+        <section>
+
+            <h2>Chat</h2>
+
+            <div id="mensajes"
+                 style="
+                 border: 1px solid #ccc;
+                 padding: 10px;
+                 height: 300px;
+                 overflow-y: auto;
+                 margin-bottom: 15px;
+                 ">
+
+            </div>
+
+
+            <form id="chatForm">
+
+                <input
+                    type="text"
+                    id="mensaje"
+                    placeholder="Escribí tu mensaje..."
+                    required
+                    autocomplete="off"
+                >
+
+                <button type="submit">
+                    Enviar
+                </button>
+
+            </form>
+
+        </section>
+
+
+        <br>
+
+        <button
+            onclick="window.location.href='estudiante.html'">
+            Volver
+        </button>
+
+    </main>
+
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>
