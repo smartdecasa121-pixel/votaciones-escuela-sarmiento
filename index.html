@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#fff4a8"><title>Votaciones Escuela Sarmiento</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="app.js"></script>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="#inicio"><span class="brand-mark">VS</span><span>Votaciones <b>Escuela Sarmiento</b></span></a><div class="top-actions"><span id="userBadge" class="user-badge">Invitado</span><button id="settingsBtn" class="icon-btn" title="Configuración" aria-label="Configuración">⚙</button><button id="authBtn" class="btn btn-dark">Ingresar</button></div></header>
+<div class="app-shell"><aside class="sidebar"><button class="nav-item active" data-view="inicio"><span>⌂</span> Inicio</button><button class="nav-item" data-view="mensajes"><span>▤</span> Mensajes</button><button class="nav-item" data-view="votaciones"><span>✋</span> Votaciones</button><button class="nav-item" data-view="candidatos"><span>☆</span> Candidatos</button><button class="nav-item" data-view="grupos"><span>◉</span> Grupos</button><button class="nav-item admin-only hidden" data-view="admin"><span>⚑</span> Administración</button><div class="sidebar-bottom"><span class="dot"></span><span id="connectionLabel">Conectando…</span></div></aside>
+<main id="main" class="main"><section class="hero"><div><p class="eyebrow">PARTICIPÁ · PROPONÉ · VOTÁ</p><h1>Tu escuela,<br><span>tu voz.</span></h1><p class="hero-copy">Un espacio para compartir ideas, conocer proyectos y participar de las votaciones de la Escuela Sarmiento.</p><div class="hero-actions"><button class="btn btn-dark" data-go="candidatos">Conocer proyectos <span>→</span></button><button class="btn btn-light" data-go="votaciones">Ir a votar</button></div></div><div class="hero-art" aria-hidden="true"><div class="sun"></div><div class="art-card card-one">💡<b>Ideas</b><small>que mejoran la escuela</small></div><div class="art-card card-two">✋<b>Tu voto</b><small>hace la diferencia</small></div><div class="art-star">✦</div></div></section><section class="section-head"><div><p class="eyebrow">EL TABLERO</p><h2>¿Qué está pasando?</h2></div><button class="text-btn" data-go="candidatos">Ver todos →</button></section><div id="homeCards" class="cards-grid"><div class="loading">Cargando proyectos…</div></div><div class="notice"><span>💛</span><div><b>Un acuerdo para convivir mejor</b><p>Respetamos las ideas de los demás, cuidamos nuestros mensajes y participamos con responsabilidad.</p></div></div><footer>Votaciones Escuela Sarmiento · Proyecto escolar</footer></main></div>
+<div id="modalRoot"></div><div id="toast" class="toast" role="status"></div>
+</body></html>
