@@ -1,5 +1,5 @@
 /* Votaciones Escuela Sarmiento — cliente Supabase. No colocar service_role key en el navegador. */
-const CONFIG={url:'https://supabase.com/dashboard/project/fcibtyumzxuthnjecwpv',anonKey:'sb_publishable_inO7chZ4QFHLbKm5JsMpoQ_vZ4p8NGu'};
+const CONFIG={url:'https://fcibtyumzxuthnjecwpv.supabase.co',anonKey:'sb_publishable_inO7chZ4QFHLbKm5JsMpoQ_vZ4p8NGu'};
 const $=s=>document.querySelector(s);const $$=s=>[...document.querySelectorAll(s)];
 let db=null,user=null,profile=null,currentView='inicio',currentRoom=null,rooms=[];
 const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
