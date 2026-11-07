@@ -9,7 +9,31 @@ function configured(){return Boolean(CONFIG.url&&CONFIG.anonKey&&window.supabase
 function modal(title,body){$('#modalRoot').innerHTML=`<div class="modal-backdrop" id="backdrop"><section class="modal"><div class="modal-head"><div><h2>${title}</h2></div><button class="close-btn" id="closeModal" aria-label="Cerrar">×</button></div>${body}</section></div>`;$('#closeModal').onclick=closeModal;$('#backdrop').addEventListener('click',e=>{if(e.target.id==='backdrop')closeModal()})}
 function closeModal(){$('#modalRoot').innerHTML=''}
 function needAuth(){if(!user){authModal('login');return false}return true}
-function authModal(mode='login'){const signup=mode==='signup';modal(signup?'Crear cuenta':'Ingresar',`<p class="muted">${signup?'Usá tu correo y creá una contraseña. El perfil inicial será estudiante.':'Ingresá con el correo y la contraseña de tu cuenta.'}</p><form id="authForm"><div class="field"><label>Correo electrónico</label><input name="email" type="email" autocomplete="email" required></div>${signup?'<div class="field"><label>Nombre para mostrar</label><input name="name" maxlength="60" required></div>':''}<div class="field"><label>Contraseña</label><input name="password" type="password" minlength="8" autocomplete="${signup?'new-password':'current-password'}" required></div><button class="btn btn-dark" style="width:100%" type="submit">${signup?'Crear cuenta':'Ingresar'}</button></form><p class="muted">${signup?'¿Ya tenés cuenta?':'¿Todavía no tenés cuenta?'} <button class="text-btn" id="switchAuth">${signup?'Ingresar':'Crear cuenta'}</button></p>`);$('#switchAuth').onclick=()=>authModal(signup?'login':'signup');$('#authForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),email=String(f.get('email')).trim().toLowerCase(),password=String(f.get('password'));let r;if(signup){r=await db.auth.signUp({email,password,options:{data:{display_name:String(f.get('name')).trim()}}})}else{r=await db.auth.signInWithPassword({email,password})}if(r.error){toast(r.error.message);return}closeModal();if(signup&&!r.data.session)toast('Cuenta creada. Revisá tu correo para confirmar y después ingresá.');else{toast(signup?'¡Cuenta creada!':'¡Bienvenido/a!');await refreshUser();go('inicio')}}}
+function authModal(mode='login'){
+ const signup=mode==='signup';
+ modal(signup?'Crear cuenta':'Ingresar',`<p class="muted">${signup?'Elegí un nombre de usuario y una contraseña. No necesitás correo electrónico.':'Ingresá con tu nombre de usuario y contraseña.'}</p><form id="authForm"><div class="field"><label>Nombre de usuario</label><input name="username" type="text" minlength="3" maxlength="20" pattern="[A-Za-z0-9_.-]+" autocomplete="username" required placeholder="Ej.: agus2016"></div>${signup?'<div class="field"><label>Nombre para mostrar</label><input name="name" maxlength="60" required></div>':''}<div class="field"><label>Contraseña</label><input name="password" type="password" minlength="8" autocomplete="${signup?'new-password':'current-password'}" required></div><button class="btn btn-dark" style="width:100%" type="submit">${signup?'Crear cuenta':'Ingresar'}</button></form><p class="muted">${signup?'¿Ya tenés cuenta?':'¿Todavía no tenés cuenta?'} <button class="text-btn" id="switchAuth">${signup?'Ingresar':'Crear cuenta'}</button></p>`);
+ $('#switchAuth').onclick=()=>authModal(signup?'login':'signup');
+ $('#authForm').onsubmit=async e=>{
+  e.preventDefault();
+  const f=new FormData(e.target);
+  const username=String(f.get('username')).trim().toLowerCase();
+  const password=String(f.get('password'));
+  if(!/^[a-z0-9_.-]{3,20}$/.test(username)){toast('El usuario debe tener entre 3 y 20 caracteres: letras, números, punto, guion o guion bajo.');return}
+  // Supabase Auth requiere un identificador tipo email. Este correo interno ficticio
+  // no pertenece a nadie y nunca se muestra ni se envía; desactivar confirmación por email en Supabase.
+  const internalEmail=username+'@votaciones-escuela.invalid';
+  let r;
+  if(signup){
+   r=await db.auth.signUp({email:internalEmail,password,options:{data:{username,display_name:String(f.get('name')).trim()}}});
+  }else{
+   r=await db.auth.signInWithPassword({email:internalEmail,password});
+  }
+  if(r.error){toast(r.error.message);return}
+  closeModal();
+  if(signup&&!r.data.session)toast('La cuenta se creó, pero falta desactivar la confirmación por correo en Supabase Auth.');
+  else{toast(signup?'¡Cuenta creada!':'¡Bienvenido/a!');await refreshUser();go('inicio')}
+ };
+}
 async function refreshUser(){const {data:{user:u}}=await db.auth.getUser();user=u;profile=null;if(user){const r=await db.from('profiles').select('user_id,display_name,role,created_at').eq('user_id',user.id).maybeSingle();if(r.error)console.warn(r.error);profile=r.data||{user_id:user.id,display_name:user.user_metadata?.display_name||user.email,role:'student'}}renderAuthUI()}
 function renderAuthUI(){$('#userBadge').textContent=user?(profile?.display_name||user.email):'Invitado';$('#authBtn').textContent=user?'Salir':'Ingresar';$$('.admin-only').forEach(x=>x.classList.toggle('hidden',profile?.role!=='admin'))}
 function go(view){currentView=view;$$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===view));renderView()}
