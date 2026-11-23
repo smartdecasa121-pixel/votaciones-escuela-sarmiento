@@ -56,7 +56,7 @@ Aplicación web estática para Vercel + Supabase: registro/inicio de sesión con
 
 ## Paso 5 — Crear y habilitar el administrador
 
-1. Abrí la web publicada y registrá tu cuenta con el correo que quieras usar como administradora.
+1. Abrí la web publicada y registrá tu cuenta con un nombre de usuario y contraseña. No hace falta correo real.
 2. En Supabase, abrí **SQL Editor → New query** y ejecutá esta consulta reemplazando `TU_USUARIO` por el nombre de usuario que registraste:
 
    ```sql
