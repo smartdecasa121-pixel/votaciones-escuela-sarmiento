@@ -187,7 +187,7 @@ async function renderAdmin(sequence){
  $$('[data-admin-message-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('¿Eliminar este mensaje?'))return;const {error}=await db.rpc('admin_delete_message',{p_message_id:b.dataset.adminMessageDelete});if(error){toast(error.message);return}toast('Mensaje eliminado.');renderAdmin()});
  $('#refreshAdmin').onclick=()=>renderAdmin();
 }
-function moderateCandidate(id,status){const {error}=await db.from('candidates').update({status}).eq('id',id);if(error){toast(error.message);return}toast(status==='approved'?'Proyecto aprobado.':'Proyecto rechazado.');renderAdmin()}
+async function moderateCandidate(id,status){const {error}=await db.from('candidates').update({status}).eq('id',id);if(error){toast(error.message);return}toast(status==='approved'?'Proyecto aprobado.':'Proyecto rechazado.');renderAdmin()}
 
 function base64UrlToBytes(value){
  const padding='='.repeat((4-value.length%4)%4);
