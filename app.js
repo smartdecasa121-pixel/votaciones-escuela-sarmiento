@@ -41,7 +41,7 @@ function authModal(mode='login'){
   go('inicio')
  };
 }
-async function refreshUser(){const {data:{user:u}}=await db.auth.getUser();user=u;profile=null;if(user){const r=await db.from('profiles').select('user_id,display_name,role,created_at').eq('user_id',user.id).maybeSingle();if(r.error)console.warn(r.error);profile=r.data||{user_id:user.id,display_name:user.user_metadata?.display_name||user.email,role:'student'}}renderAuthUI()}
+async function refreshUser(){const {data:{user:u}}=await db.auth.getUser();user=u;profile=null;if(user){const r=await db.from('profiles').select('user_id,display_name,role,created_at,suspended').eq('user_id',user.id).maybeSingle();if(r.error)console.warn(r.error);profile=r.data||{user_id:user.id,display_name:user.user_metadata?.display_name||user.email,role:'student'};if(profile.suspended){await db.auth.signOut();user=null;profile=null;toast('Esta cuenta está suspendida. Contactá a la administración.')}}renderAuthUI()}
 function renderAuthUI(){$('#userBadge').textContent=user?(profile?.display_name||user.email):'Invitado';$('#authBtn').textContent=user?'Salir':'Ingresar';$$('.admin-only').forEach(x=>x.classList.toggle('hidden',profile?.role!=='admin'))}
 let renderSequence=0;
 function go(view){
