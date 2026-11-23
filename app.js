@@ -114,7 +114,7 @@ async function renderRoomMessages(){
    const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(t=>MediaRecorder.isTypeSupported(t))||'';
    recorder=new MediaRecorder(recordingStream,mime?{mimeType:mime}:{});
    chunks=[];recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
-   recorder.onstop=async()=>{recordingStream?.getTracks().forEach(t=>t.stop());recordingStream=null;const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});const ext=blob.type.includes('mp4')?'m4a':'webm';const audioFile=new File([blob],\`audio-\${Date.now()}.\${ext}\`,{type:blob.type});status.textContent='';await sendAttachment(audioFile,'audio')};
+   recorder.onstop=async()=>{recordingStream?.getTracks().forEach(t=>t.stop());recordingStream=null;const rawBlob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});const normalizedType=(rawBlob.type||'audio/webm').split(';')[0];const blob=new Blob([rawBlob],{type:normalizedType});const ext=normalizedType.includes('mp4')?'m4a':'webm';const audioFile=new File([blob],`audio-${Date.now()}.${ext}`,{type:normalizedType});status.textContent='';await sendAttachment(audioFile,'audio')};
    recorder.start();btn.textContent='⏹️';status.textContent='Grabando… Tocá para detener';
   }catch(err){toast('No se pudo acceder al micrófono. Revisá los permisos del navegador.');status.textContent=''}
  };
