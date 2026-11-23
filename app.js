@@ -149,20 +149,34 @@ async function renderRoomMessages(refreshOnly=false){
 }
 function formatBytes(bytes){if(!bytes)return '';if(bytes<1024)return bytes+' B';if(bytes<1048576)return (bytes/1024).toFixed(1)+' KB';return (bytes/1048576).toFixed(1)+' MB'}
 async function renderAdmin(sequence){
- const [cs,users,results]=await Promise.all([
+ const [cs,users,results,groups,messages,voting]=await Promise.all([
   db.from('candidates').select('id,title,status,user_id,created_at,profiles(display_name)').order('created_at',{ascending:false}),
-  db.from('profiles').select('user_id,display_name,role,created_at'),
-  db.rpc('public_vote_results')
+  db.from('profiles').select('user_id,display_name,role,suspended,created_at').order('created_at',{ascending:false}),
+  db.rpc('public_vote_results'),
+  db.from('chat_groups').select('id,name,description,created_by,created_at,profiles:profiles!chat_groups_created_by_fkey(display_name)').order('created_at',{ascending:false}),
+  db.from('messages').select('id,body,group_id,user_id,created_at,chat_groups(name),profiles(display_name)').order('created_at',{ascending:false}).limit(50),
+  db.from('platform_settings').select('voting_open').eq('id',true).maybeSingle()
  ]);
  if(sequence&&sequence!==renderSequence)return;
+ const errors=[cs,users,results,groups,messages,voting].find(x=>x.error);
+ if(errors){$('#main').innerHTML=`${titleBlock('Administración','No se pudieron cargar todos los datos.')}<div class="panel-card">${escapeHTML(errors.error.message)}</div>`;return}
  const totalVotes=(results.data||[]).reduce((sum,row)=>sum+Number(row.vote_count||0),0);
- if(cs.error||users.error||results.error){$('#main').innerHTML=`${titleBlock('Administración','No se pudieron cargar todos los datos.')}<div class="panel-card">${escapeHTML(cs.error?.message||users.error?.message||results.error?.message||'Error desconocido')}</div>`;return}
- $('#main').innerHTML=`${titleBlock('Administración','Revisá propuestas y consultá la actividad de la plataforma.')}<div class="admin-grid"><div class="stat"><strong>${users.data?.length||0}</strong><span>Perfiles</span></div><div class="stat"><strong>${cs.data?.length||0}</strong><span>Propuestas</span></div><div class="stat"><strong>${totalVotes}</strong><span>Votos emitidos</span></div></div><section class="panel-card" style="margin-top:18px"><h3>Propuestas pendientes</h3>${(cs.data||[]).filter(c=>c.status==='pending').map(c=>`<div class="list-item"><div class="row"><b>${escapeHTML(c.title)}</b><span class="pill">Pendiente</span></div><p>Por ${escapeHTML(c.profiles?.display_name||'Estudiante')}</p><div class="row"><button class="btn btn-dark btn-small" data-approve="${c.id}">Aprobar</button><button class="btn btn-light btn-small danger" data-reject="${c.id}">Rechazar</button></div></div>`).join('')||'<p class="muted">No hay propuestas pendientes.</p>'}</section><section class="panel-card" style="margin-top:18px"><h3>Estado de la votación</h3><p class="muted">Los resultados visibles para todos se muestran en la sección Votaciones. Los votos son únicos por cuenta.</p><button class="btn btn-light btn-small" id="refreshAdmin">Actualizar datos</button></section>`;
- $$('[data-approve]').forEach(b=>b.onclick=()=>moderateCandidate(b.dataset.approve,'approved'));
- $$('[data-reject]').forEach(b=>b.onclick=()=>moderateCandidate(b.dataset.reject,'rejected'));
- $('#refreshAdmin').onclick=renderAdmin;
+ $('#main').innerHTML=`${titleBlock('Administración','Panel de control de la plataforma. Las acciones quedan protegidas por permisos del servidor.')}
+ <div class="admin-grid"><div class="stat"><strong>${users.data.length}</strong><span>Perfiles</span></div><div class="stat"><strong>${cs.data.length}</strong><span>Propuestas</span></div><div class="stat"><strong>${totalVotes}</strong><span>Votos emitidos</span></div></div>
+ <section class="panel-card" style="margin-top:18px"><div class="row"><div><h3>Votaciones</h3><p class="muted">Controlá si los estudiantes pueden emitir votos.</p></div><span class="pill">${voting.data?.voting_open===false?'Cerrada':'Abierta'}</span></div><button class="btn btn-dark btn-small" id="toggleVoting">${voting.data?.voting_open===false?'Abrir votación':'Cerrar votación'}</button></section>
+ <section class="panel-card" style="margin-top:18px"><h3>Usuarios</h3><p class="muted">Consultá perfiles y suspendé o rehabilitá cuentas. No se puede cambiar el único administrador.</p>${users.data.map(u=>`<div class="list-item"><div class="row"><div><b>${escapeHTML(u.display_name)}</b><p>${u.role==='admin'?'Administración':'Estudiante'} · ${dateLabel(u.created_at)}</p></div><div>${u.role==='admin'?'<span class="pill">Admin único</span>':`<button class="btn btn-small ${u.suspended?'btn-light':'btn-dark'}" data-suspend="${u.user_id}" data-next="${!u.suspended}">${u.suspended?'Rehabilitar':'Suspender'}</button>`}</div></div></div>`).join('')}</section>
+ <section class="panel-card" style="margin-top:18px"><h3>Propuestas y candidatos</h3>${cs.data.map(c=>`<div class="list-item"><div class="row"><div><b>${escapeHTML(c.title)}</b><p>Por ${escapeHTML(c.profiles?.display_name||'Estudiante')} · ${c.status}</p></div><div class="row"><button class="btn btn-light btn-small" data-status="${c.id}" data-next="approved">Aprobar</button><button class="btn btn-light btn-small danger" data-status="${c.id}" data-next="rejected">Rechazar</button></div></div></div>`).join('')||'<p class="muted">No hay propuestas.</p>'}</section>
+ <section class="panel-card" style="margin-top:18px"><h3>Grupos</h3>${groups.data.map(g=>`<div class="list-item"><div class="row"><div><b>${escapeHTML(g.name)}</b><p>Dueño: ${escapeHTML(g.profiles?.display_name||'Estudiante')}</p></div><button class="btn btn-light btn-small danger" data-admin-group-delete="${g.id}">Eliminar grupo</button></div></div>`).join('')||'<p class="muted">No hay grupos.</p>'}</section>
+ <section class="panel-card" style="margin-top:18px"><h3>Mensajes recientes</h3>${messages.data.map(m=>`<div class="list-item"><div class="row"><div><b>${escapeHTML(m.profiles?.display_name||'Estudiante')} · ${escapeHTML(m.chat_groups?.name||'Grupo')}</b><p>${escapeHTML(m.body||'Adjunto multimedia')} · ${new Date(m.created_at).toLocaleString('es-AR')}</p></div><button class="btn btn-light btn-small danger" data-admin-message-delete="${m.id}">Eliminar</button></div></div>`).join('')||'<p class="muted">No hay mensajes.</p>'}</section>
+ <div style="margin-top:18px"><button class="btn btn-light" id="refreshAdmin">Actualizar panel</button></div>`;
+ $('#toggleVoting').onclick=async()=>{const {error}=await db.rpc('admin_set_voting_open',{p_open:voting.data?.voting_open===false});if(error){toast(error.message);return}toast('Estado de votación actualizado.');renderAdmin()};
+ $$('[data-suspend]').forEach(b=>b.onclick=async()=>{const {error}=await db.rpc('admin_set_user_suspended',{p_user_id:b.dataset.suspend,p_suspended:b.dataset.next==='true'});if(error){toast(error.message);return}toast('Estado de cuenta actualizado.');renderAdmin()});
+ $$('[data-status]').forEach(b=>b.onclick=async()=>{const {error}=await db.rpc('admin_set_candidate_status',{p_candidate_id:b.dataset.status,p_status:b.dataset.next});if(error){toast(error.message);return}toast('Propuesta actualizada.');renderAdmin()});
+ $$('[data-admin-group-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('¿Eliminar este grupo y sus mensajes? Esta acción no se puede deshacer.'))return;const {error}=await db.rpc('admin_delete_group',{p_group_id:b.dataset.adminGroupDelete});if(error){toast(error.message);return}toast('Grupo eliminado.');renderAdmin()});
+ $$('[data-admin-message-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('¿Eliminar este mensaje?'))return;const {error}=await db.rpc('admin_delete_message',{p_message_id:b.dataset.adminMessageDelete});if(error){toast(error.message);return}toast('Mensaje eliminado.');renderAdmin()});
+ $('#refreshAdmin').onclick=()=>renderAdmin();
 }
-async function moderateCandidate(id,status){const {error}=await db.from('candidates').update({status}).eq('id',id);if(error){toast(error.message);return}toast(status==='approved'?'Proyecto aprobado.':'Proyecto rechazado.');renderAdmin()}
+function moderateCandidate(id,status){const {error}=await db.from('candidates').update({status}).eq('id',id);if(error){toast(error.message);return}toast(status==='approved'?'Proyecto aprobado.':'Proyecto rechazado.');renderAdmin()}
 
 function base64UrlToBytes(value){
  const padding='='.repeat((4-value.length%4)%4);
