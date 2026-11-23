@@ -127,3 +127,12 @@ drop trigger if exists reject_suspended_members on public.group_members;
 create trigger reject_suspended_members before insert or update or delete on public.group_members for each row execute function public.reject_suspended_user();
 drop trigger if exists reject_suspended_messages on public.messages;
 create trigger reject_suspended_messages before insert or update or delete on public.messages for each row execute function public.reject_suspended_user();
+
+create or replace function public.admin_reset_votes()
+returns void language plpgsql security definer set search_path='' as $$
+begin
+ if not exists(select 1 from public.profiles where user_id=auth.uid() and role='admin' and not suspended) then raise exception 'Solo administración puede hacer esto.'; end if;
+ delete from public.votes;
+end; $$;
+revoke all on function public.admin_reset_votes() from public,anon;
+grant execute on function public.admin_reset_votes() to authenticated;
