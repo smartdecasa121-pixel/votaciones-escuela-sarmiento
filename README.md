@@ -6,7 +6,7 @@ Aplicación web estática para Vercel + Supabase: registro/inicio de sesión con
 
 - Necesitás una cuenta en Supabase y una en Vercel (sus planes gratuitos pueden alcanzar para pruebas escolares, sujetos a límites/cambios del proveedor).
 - **No es un sistema de voto secreto certificado ni debe usarse para elecciones oficiales o decisiones de alto riesgo.** El administrador puede moderar proyectos; los resultados agregados son visibles. La votación es una por cuenta, no una verificación de identidad escolar.
-- Los perfiles muestran solo nombre y rol; no se publican teléfonos ni correos. El chat permite mensajes, fotos, audios grabados/adjuntos y documentos con acceso privado por grupo.
+- Los perfiles muestran solo nombre y rol; no se publican teléfonos ni correos. El chat permite mensajes, fotos, audios grabados o adjuntados y documentos con acceso privado por grupo; incluye separador naranja de mensajes nuevos.
 - Nunca publiques una clave `service_role` ni contraseñas de base de datos. La web solo usa la clave pública/anon con RLS activado.
 
 ## Paso 1 — Crear Supabase
@@ -87,7 +87,7 @@ Aplicación web estática para Vercel + Supabase: registro/inicio de sesión con
 - Voto único por usuario impuesto en PostgreSQL; la interfaz no es la autoridad de seguridad.
 - Conteos agregados de votos, sin exponer filas de votos ajenas.
 - Grupos privados por contraseña (el navegador calcula SHA-256 y la base solo almacena el hash), membresías y chat persistente.
-- Adjuntos del chat en bucket privado: imágenes, notas de voz grabadas desde el navegador, audios adjuntos y documentos. El acceso se controla por pertenencia al grupo; los enlaces de descarga son temporales. Límite configurado: 20 MB por archivo.
+- Adjuntos del chat en bucket privado: imágenes, notas de voz grabadas desde el navegador, archivos de audio adjuntos y documentos. El acceso se controla por pertenencia al grupo; los enlaces de descarga son temporales. Límite configurado: 20 MB por archivo.
 - Políticas RLS en las tablas y funciones RPC para votar/crear/unirse a grupos.
 
 Importante: esta versión es una base funcional para un proyecto escolar y pruebas supervisadas. No incluye recuperación de contraseña personalizada, verificación de identidad de alumnos, moderación automática de chat, auditoría formal, ni secreto criptográfico/certificación electoral. Revisá mensajes y permisos antes de usarla con menores en producción. Para recuperación de contraseña se puede usar el flujo de Supabase Auth.
