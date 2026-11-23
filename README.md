@@ -21,6 +21,7 @@ Aplicación web estática para Vercel + Supabase: registro/inicio de sesión con
 8. En Authentication → Providers → Email, desactivá **Confirm email**: el acceso usa un nombre de usuario convertido internamente a un identificador técnico `@votaciones-escuela.invalid`, no una dirección de correo real.
 9. Después de aplicar el esquema base, ejecutá una sola vez `supabase-media-chat-migration.sql` desde SQL Editor. Crea un bucket privado y las políticas de acceso para los adjuntos.
 10. Ejecutá también `supabase-push-notifications.sql`. Configura las suscripciones privadas y los avisos automáticos. La función `send-push` ya está desplegada en Supabase; genera las claves VAPID del servidor al activar la primera suscripción.
+11. La migración `supabase-settings-fix.sql` ya está aplicada en el proyecto conectado; incluila si preparás otra instancia para permitir que administradores actualicen su nombre sin cambiar su rol.
 
 ## Paso 2 — Configurar la web
 
@@ -71,7 +72,11 @@ Aplicación web estática para Vercel + Supabase: registro/inicio de sesión con
 3. Cerrá sesión en la web y volvé a ingresar. Vas a ver la sección **Administración**, desde donde podés aprobar o rechazar proyectos.
 4. No habilites a nadie como administrador salvo que sea necesario. No se puede cambiar el rol desde la interfaz de estudiante.
 
-## Paso 6 — Probar todo
+## Configuración de cuenta
+
+Desde el botón ⚙️, cada usuario puede editar su nombre visible, cambiar su contraseña, administrar notificaciones y cerrar sesión. Los nombres se guardan en el perfil de Supabase y la contraseña se actualiza mediante Auth. Los permisos de base de datos impiden que un estudiante se convierta en administrador.
+
+## Paso 7 — Probar todo
 
 1. Registrá dos cuentas distintas con nombres de usuario y contraseñas.
 2. Ingresá como administradora, aprobá una propuesta.
