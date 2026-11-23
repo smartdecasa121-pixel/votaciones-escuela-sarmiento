@@ -20,6 +20,7 @@ Aplicación web estática para Vercel + Supabase: registro/inicio de sesión con
 7. Para que el chat se actualice en vivo, en Database → Replication/Realtime habilitá la tabla `public.messages`.
 8. En Authentication → Providers → Email, desactivá **Confirm email**: el acceso usa un nombre de usuario convertido internamente a un identificador técnico `@votaciones-escuela.invalid`, no una dirección de correo real.
 9. Después de aplicar el esquema base, ejecutá una sola vez `supabase-media-chat-migration.sql` desde SQL Editor. Crea un bucket privado y las políticas de acceso para los adjuntos.
+10. Ejecutá también `supabase-push-notifications.sql`. Configura las suscripciones privadas y los avisos automáticos. La función `send-push` ya está desplegada en Supabase; genera las claves VAPID del servidor al activar la primera suscripción.
 
 ## Paso 2 — Configurar la web
 
@@ -77,7 +78,8 @@ Aplicación web estática para Vercel + Supabase: registro/inicio de sesión con
 3. Ingresá como estudiante: revisá Candidatos, Votaciones y emití un voto. Volvé a intentar votar: debe bloquearse por cuenta.
 4. Creá un grupo con contraseña desde Grupos; en la segunda cuenta, uníte usando nombre exacto y contraseña; mandá mensajes desde ambas cuentas.
 5. En un grupo, probá enviar texto, una foto, un audio grabado desde el micrófono y un PDF/documento. Probá abrirlos desde la segunda cuenta y desde otro dispositivo.
-6. Revisá el sitio desde otro dispositivo/navegador y verificá que los datos persisten.
+6. Tocá la campana, activá las notificaciones y aceptá el permiso del navegador. Probá enviar un mensaje desde la segunda cuenta con la primera sesión cerrada o la página en segundo plano.
+7. Revisá el sitio desde otro dispositivo/navegador y verificá que los datos persisten.
 
 ## Qué incluye y límites conocidos
 
@@ -88,6 +90,7 @@ Aplicación web estática para Vercel + Supabase: registro/inicio de sesión con
 - Conteos agregados de votos, sin exponer filas de votos ajenas.
 - Grupos privados por contraseña (el navegador calcula SHA-256 y la base solo almacena el hash), membresías y chat persistente.
 - Adjuntos del chat en bucket privado: imágenes, notas de voz grabadas desde el navegador, archivos de audio adjuntos y documentos. El acceso se controla por pertenencia al grupo; los enlaces de descarga son temporales. Límite configurado: 20 MB por archivo.
+- Notificaciones push instalables mediante PWA: mensajes de grupo (incluye avisos diferenciados para fotos, audios y archivos), nuevas propuestas para administración y cambios de estado de candidaturas. Cada usuario activa o desactiva los avisos desde el botón de campana; el navegador debe conceder permiso.
 - Políticas RLS en las tablas y funciones RPC para votar/crear/unirse a grupos.
 
-Importante: esta versión es una base funcional para un proyecto escolar y pruebas supervisadas. No incluye recuperación de contraseña personalizada, verificación de identidad de alumnos, moderación automática de chat, auditoría formal, ni secreto criptográfico/certificación electoral. Revisá mensajes y permisos antes de usarla con menores en producción. Para recuperación de contraseña se puede usar el flujo de Supabase Auth.
+Importante: esta versión es una base funcional para un proyecto escolar y pruebas supervisadas. No incluye recuperación de contraseña personalizada, verificación de identidad de alumnos, moderación automática de chat, auditoría formal, ni secreto criptográfico/certificación electoral. En iPhone/iPad, las notificaciones web push requieren una versión compatible de iOS/iPadOS y que la aplicación esté agregada a la pantalla de inicio. Revisá mensajes y permisos antes de usarla con menores en producción. Para recuperación de contraseña se puede usar el flujo de Supabase Auth.
