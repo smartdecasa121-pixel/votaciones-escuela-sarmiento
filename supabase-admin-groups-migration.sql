@@ -116,7 +116,7 @@ create or replace function public.reject_suspended_user()
 returns trigger language plpgsql security definer set search_path='' as $$
 begin
  if exists(select 1 from public.profiles where user_id=auth.uid() and suspended) then raise exception 'Tu cuenta está suspendida. No podés realizar esta acción.'; end if;
- return coalesce(new,old);
+ if tg_op='DELETE' then return old; else return new; end if;
 end; $$;
 revoke all on function public.reject_suspended_user() from public,anon,authenticated;
 drop trigger if exists reject_suspended_candidates on public.candidates;
