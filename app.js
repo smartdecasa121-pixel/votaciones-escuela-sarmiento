@@ -48,7 +48,7 @@ function go(view){
  const allowed=['inicio','mensajes','votaciones','candidatos','grupos','admin'];
  if(!allowed.includes(view))view='inicio';
  currentView=view;
- $('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+ $$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
  try{if(location.hash!=='#'+view)history.pushState(null,'','#'+view)}catch(e){}
  renderView();
 }
