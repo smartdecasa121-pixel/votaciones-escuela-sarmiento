@@ -178,8 +178,9 @@ async function enablePush(){
   const subscription=existing||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:base64UrlToBytes(config.publicKey)});
   const data=subscription.toJSON();
   if(!data.keys||!data.keys.p256dh||!data.keys.auth)throw new Error('El navegador no entregó las claves de la suscripción.');
-  const saved=await db.from('push_subscriptions').upsert({user_id:user.id,endpoint:data.endpoint,p256dh:data.keys.p256dh,auth:data.keys.auth},{onConflict:'endpoint'});
-  if(saved.error)throw saved.error;
+  const prior=await db.from('push_subscriptions').select('id').eq('user_id',user.id).eq('endpoint',data.endpoint).maybeSingle();
+  if(prior.error)throw prior.error;
+  if(!prior.data){const saved=await db.from('push_subscriptions').insert({user_id:user.id,endpoint:data.endpoint,p256dh:data.keys.p256dh,auth:data.keys.auth});if(saved.error)throw saved.error;}
   toast('¡Notificaciones activadas!');
   notificationsModal();
  }catch(error){console.error(error);toast(error.message||'No se pudieron activar las notificaciones.')}
