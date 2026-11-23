@@ -76,7 +76,7 @@ Aplicación web estática para Vercel + Supabase: registro/inicio de sesión con
 
 Desde el botón ⚙️, cada usuario puede editar su nombre visible, cambiar su contraseña, administrar notificaciones y cerrar sesión. Los nombres se guardan en el perfil de Supabase y la contraseña se actualiza mediante Auth. Los permisos de base de datos impiden que un estudiante se convierta en administrador.
 
-## Paso 7 — Probar todo
+## Paso 6 — Probar todo
 
 1. Registrá dos cuentas distintas con nombres de usuario y contraseñas.
 2. Ingresá como administradora, aprobá una propuesta.
