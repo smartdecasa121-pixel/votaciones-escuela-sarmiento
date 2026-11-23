@@ -9,6 +9,33 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
+-- Solo una cuenta puede tener rol de administración.
+create unique index if not exists profiles_only_one_admin
+on public.profiles (role) where role = 'admin';
+
+-- El rol no se puede cambiar desde una sesión de usuario. La única cuenta
+-- autorizada para recibir el rol admin es la cuenta inicial de Agus.
+create or replace function public.prevent_profile_role_changes()
+returns trigger language plpgsql set search_path = '' as $
+begin
+  if new.role is distinct from old.role then
+    if auth.uid() is not null then
+      raise exception 'No tenés permiso para cambiar el rol de una cuenta.';
+    end if;
+    if new.role = 'admin'
+       and new.user_id <> 'b3f90eaa-08b7-406a-b18c-93c26ed468ff'::uuid then
+      raise exception 'Esta cuenta no puede ser administradora.';
+    end if;
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists protect_profile_role on public.profiles;
+create trigger protect_profile_role
+before update of role on public.profiles
+for each row execute function public.prevent_profile_role_changes();
+
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
@@ -74,7 +101,7 @@ alter table public.messages enable row level security;
 drop policy if exists "profiles visible" on public.profiles;
 create policy "profiles visible" on public.profiles for select to anon, authenticated using (true);
 drop policy if exists "profile owner update name" on public.profiles;
-create policy "profile owner update name" on public.profiles for update to authenticated using (auth.uid()=user_id) with check (auth.uid()=user_id and role='student');
+create policy "profile owner update name" on public.profiles for update to authenticated using (auth.uid()=user_id) with check (auth.uid()=user_id);
 -- La creación de perfil la hace el trigger de Auth.
 
 drop policy if exists "approved candidates public and own pending" on public.candidates;
