@@ -150,3 +150,26 @@ revoke all on function public.join_chat_group(text,text) from public;
 grant execute on function public.join_chat_group(text,text) to authenticated;
 
 -- Realtime para el chat: en Dashboard > Database > Replication, habilitá public.messages si aún no está habilitado.
+
+
+-- Explicit function permissions: trigger-only function is never exposed as an RPC.
+revoke all on function public.handle_new_user() from public, anon, authenticated;
+revoke all on function public.cast_vote(uuid) from public, anon;
+grant execute on function public.cast_vote(uuid) to authenticated;
+revoke all on function public.create_chat_group(text,text,text) from public, anon;
+grant execute on function public.create_chat_group(text,text,text) to authenticated;
+revoke all on function public.join_chat_group(text,text) from public, anon;
+grant execute on function public.join_chat_group(text,text) to authenticated;
+revoke all on function public.public_vote_results() from public, anon;
+grant execute on function public.public_vote_results() to authenticated;
+
+-- Never expose group password hashes via table reads.
+revoke select on table public.chat_groups from anon, authenticated;
+grant select (id,name,description,created_by,created_at) on table public.chat_groups to authenticated;
+
+-- Supporting indexes for joins and membership checks.
+create index if not exists candidates_user_id_idx on public.candidates(user_id);
+create index if not exists chat_groups_created_by_idx on public.chat_groups(created_by);
+create index if not exists group_members_user_id_idx on public.group_members(user_id);
+create index if not exists messages_user_id_idx on public.messages(user_id);
+create index if not exists votes_candidate_id_idx on public.votes(candidate_id);
