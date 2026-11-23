@@ -19,7 +19,7 @@ alter table public.messages add constraint messages_type_check
 
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
 values('chat-attachments','chat-attachments',false,20971520,
- array['image/jpeg','image/png','image/webp','image/gif','audio/webm','audio/mp4','audio/mpeg','audio/ogg','audio/wav','audio/aac',
+ array['image/jpeg','image/png','image/webp','image/gif','audio/webm','audio/mp4','audio/mpeg','audio/ogg','audio/wav','audio/aac','audio/x-wav','audio/flac','audio/3gpp','audio/x-m4a',
  'application/pdf','text/plain','text/csv','application/zip',
  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
