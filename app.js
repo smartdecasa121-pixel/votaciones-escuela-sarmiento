@@ -145,9 +145,79 @@ async function renderAdmin(){
  $('#refreshAdmin').onclick=renderAdmin;
 }
 async function moderateCandidate(id,status){const {error}=await db.from('candidates').update({status}).eq('id',id);if(error){toast(error.message);return}toast(status==='approved'?'Proyecto aprobado.':'Proyecto rechazado.');renderAdmin()}
+
+function base64UrlToBytes(value){
+ const padding='='.repeat((4-value.length%4)%4);
+ const base64=(value+padding).replace(/-/g,'+').replace(/_/g,'/');
+ const raw=atob(base64);
+ return Uint8Array.from(raw,c=>c.charCodeAt(0));
+}
+async function pushFunctionRequest(method,body){
+ const result=await db.auth.getSession();
+ const session=result.data.session;
+ if(!session||!session.access_token)throw new Error('Iniciá sesión primero.');
+ const response=await fetch(CONFIG.url+'/functions/v1/send-push',{
+  method:method,
+  headers:{'Content-Type':'application/json','apikey':CONFIG.anonKey,'Authorization':'Bearer '+session.access_token},
+  body:body?JSON.stringify(body):undefined
+ });
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok)throw new Error(data.error||'No se pudo conectar con notificaciones.');
+ return data;
+}
+async function enablePush(){
+ if(!user){authModal('login');return}
+ if(!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window)){toast('Este navegador no admite notificaciones push.');return}
+ if(!window.isSecureContext){toast('Las notificaciones necesitan HTTPS.');return}
+ try{
+  const permission=await Notification.requestPermission();
+  if(permission!=='granted'){toast('No diste permiso para las notificaciones.');return}
+  const registration=await (window.vseServiceWorker||navigator.serviceWorker.register('/sw.js'));
+  const config=await pushFunctionRequest('GET');
+  const existing=await registration.pushManager.getSubscription();
+  const subscription=existing||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:base64UrlToBytes(config.publicKey)});
+  const data=subscription.toJSON();
+  if(!data.keys||!data.keys.p256dh||!data.keys.auth)throw new Error('El navegador no entregó las claves de la suscripción.');
+  const saved=await db.from('push_subscriptions').upsert({user_id:user.id,endpoint:data.endpoint,p256dh:data.keys.p256dh,auth:data.keys.auth},{onConflict:'endpoint'});
+  if(saved.error)throw saved.error;
+  toast('¡Notificaciones activadas!');
+  notificationsModal();
+ }catch(error){console.error(error);toast(error.message||'No se pudieron activar las notificaciones.')}
+}
+async function disablePush(){
+ if(!user)return;
+ try{
+  const registration=await navigator.serviceWorker.ready;
+  const subscription=await registration.pushManager.getSubscription();
+  if(subscription){
+   const removed=await db.from('push_subscriptions').delete().eq('endpoint',subscription.endpoint).eq('user_id',user.id);
+   if(removed.error)throw removed.error;
+   await subscription.unsubscribe();
+  }
+  toast('Notificaciones desactivadas.');
+  notificationsModal();
+ }catch(error){console.error(error);toast(error.message||'No se pudieron desactivar.')}
+}
+async function notificationsModal(){
+ if(!user){authModal('login');return}
+ let subscribed=false;
+ try{
+  const registration=await navigator.serviceWorker.ready;
+  subscribed=Boolean(await registration.pushManager.getSubscription());
+ }catch(e){}
+ const supported=('serviceWorker'in navigator)&&('PushManager'in window)&&('Notification'in window);
+ const permission=('Notification'in window)?Notification.permission:'unsupported';
+ const status=!supported?'No compatible':subscribed?'Activadas':permission==='denied'?'Bloqueadas en el navegador':'Desactivadas';
+ const detail=permission==='denied'?'Permití las notificaciones desde la configuración del navegador para poder activarlas.':'Podés cambiar esta opción cuando quieras.';
+ const action=subscribed?'<button class="btn btn-light" id="disablePushBtn">Desactivar notificaciones</button>':'<button class="btn btn-dark" id="enablePushBtn" '+(!supported||permission==='denied'?'disabled':'')+'>Activar notificaciones</button>';
+ modal('Notificaciones','<p class="muted">Recibí avisos de mensajes en tus grupos y novedades de tus proyectos, incluso cuando no tengas abierta la página.</p><div class="panel-card"><b>Estado: '+status+'</b><p class="muted">'+detail+'</p></div>'+action);
+ $('#enablePushBtn')?.addEventListener('click',enablePush);
+ $('#disablePushBtn')?.addEventListener('click',disablePush);
+}
+
 function settingsModal(){modal('Configuración',`<p class="muted">La configuración de conexión se hace editando <code>app.js</code> y se publica junto al sitio. Solo deben colocarse la URL del proyecto Supabase y la clave publicable/anon.</p><p class="muted">${user?'Sesión iniciada como '+escapeHTML(user.email):'No hay ninguna sesión iniciada.'}</p>${user?'<button id="logoutSettings" class="btn btn-dark">Cerrar sesión</button>':'<button id="loginSettings" class="btn btn-dark">Ingresar</button>'}`);$('#logoutSettings')?.addEventListener('click',logout);$('#loginSettings')?.addEventListener('click',()=>authModal('login'))}
 async function logout(){await db.auth.signOut();user=null;profile=null;currentRoom=null;if(window.roomChannel){db.removeChannel(window.roomChannel);window.roomChannel=null;window.roomChannelRoom=null}renderAuthUI();closeModal();toast('Sesión cerrada.');go('inicio')}
 document.addEventListener('click',e=>{const goBtn=e.target.closest('[data-go]');if(goBtn)go(goBtn.dataset.go);const nav=e.target.closest('[data-view]');if(nav)go(nav.dataset.view);const voteBtn=e.target.closest('[data-vote]');if(voteBtn)vote(voteBtn.dataset.vote)});
-$('#settingsBtn').onclick=settingsModal;$('#authBtn').onclick=()=>user?logout():authModal('login');
-async function boot(){if(!configured()){$('#connectionLabel').textContent='Falta configurar';renderView();return}db=window.supabase.createClient(CONFIG.url,CONFIG.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});try{await refreshUser();$('#connectionLabel').textContent='Supabase conectado';$('.dot')?.classList.add('online');db.auth.onAuthStateChange(()=>{setTimeout(async()=>{await refreshUser();if(!user&&window.roomChannel){db.removeChannel(window.roomChannel);window.roomChannel=null;window.roomChannelRoom=null}await renderView()},0)});await renderView()}catch(e){console.error(e);$('#connectionLabel').textContent='Error de conexión';toast('No se pudo conectar con Supabase. Revisá la configuración.')}}
+$('#settingsBtn').onclick=settingsModal;$('#notificationsBtn').onclick=notificationsModal;$('#authBtn').onclick=()=>user?logout():authModal('login');
+async function boot(){if('serviceWorker'in navigator){window.vseServiceWorker=navigator.serviceWorker.register('/sw.js').catch(error=>{console.warn('Service worker unavailable',error);return null})}if(!configured()){$('#connectionLabel').textContent='Falta configurar';renderView();return}db=window.supabase.createClient(CONFIG.url,CONFIG.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});try{await refreshUser();$('#connectionLabel').textContent='Supabase conectado';$('.dot')?.classList.add('online');db.auth.onAuthStateChange(()=>{setTimeout(async()=>{await refreshUser();if(!user&&window.roomChannel){db.removeChannel(window.roomChannel);window.roomChannel=null;window.roomChannelRoom=null}await renderView()},0)});await renderView()}catch(e){console.error(e);$('#connectionLabel').textContent='Error de conexión';toast('No se pudo conectar con Supabase. Revisá la configuración.')}}
 boot();
