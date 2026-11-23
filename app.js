@@ -62,6 +62,7 @@ async function renderRoomMessages(){
  <form id="messageForm" class="chat-composer">
   <div class="composer-tools">
    <label class="attach-btn" title="Enviar fotos"><input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>📷</label>
+   <label class="attach-btn" title="Adjuntar audio"><input id="audioInput" type="file" accept="audio/*" hidden>🎵</label>
    <label class="attach-btn" title="Enviar archivos"><input id="fileInput" type="file" accept=".pdf,.txt,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.zip" hidden>📎</label>
    <button type="button" class="attach-btn" id="recordBtn" title="Grabar audio">🎙️</button>
    <span id="recordStatus" class="record-status" aria-live="polite"></span>
@@ -90,7 +91,7 @@ async function renderRoomMessages(){
  async function sendAttachment(file,kind){
   if(!file)return;
   if(file.size>20*1024*1024){toast('El archivo supera el límite de 20 MB.');return}
-  const allowed=kind==='image'?['image/jpeg','image/png','image/webp','image/gif']:kind==='audio'?['audio/webm','audio/mp4','audio/mpeg','audio/ogg','audio/wav','audio/aac']:['application/pdf','text/plain','text/csv','application/zip','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint'];
+  const allowed=kind==='image'?['image/jpeg','image/png','image/webp','image/gif']:kind==='audio'?['audio/webm','audio/mp4','audio/mpeg','audio/ogg','audio/wav','audio/aac','audio/x-wav','audio/flac','audio/3gpp','audio/x-m4a']:['application/pdf','text/plain','text/csv','application/zip','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint'];
   if(!allowed.includes(file.type)){toast('Ese formato no está permitido.');return}
   const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-100)||'archivo';
   const path=`${currentRoom}/${user.id}/${crypto.randomUUID()}-${safeName}`;
@@ -102,6 +103,7 @@ async function renderRoomMessages(){
   toast('Archivo enviado.');await renderRoomMessages();
  }
  $('#imageInput').onchange=e=>sendAttachment(e.target.files[0],'image');
+ $('#audioInput').onchange=e=>sendAttachment(e.target.files[0],'audio');
  $('#fileInput').onchange=e=>sendAttachment(e.target.files[0],'file');
  form.onsubmit=async e=>{e.preventDefault();const body=bodyInput.value.trim();if(!body)return;const {error}=await db.from('messages').insert({group_id:currentRoom,user_id:user.id,body,message_type:'text'});if(error){toast(error.message);return}bodyInput.value='';await renderRoomMessages()};
  let recorder=null,chunks=[],recordingStream=null;
