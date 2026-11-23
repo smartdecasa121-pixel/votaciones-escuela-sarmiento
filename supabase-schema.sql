@@ -16,7 +16,7 @@ on public.profiles (role) where role = 'admin';
 -- El rol no se puede cambiar desde una sesión de usuario. La única cuenta
 -- autorizada para recibir el rol admin es la cuenta inicial de Agus.
 create or replace function public.prevent_profile_role_changes()
-returns trigger language plpgsql set search_path = '' as $
+returns trigger language plpgsql set search_path = '' as $function$
 begin
   if new.role is distinct from old.role then
     if auth.uid() is not null then
@@ -29,7 +29,7 @@ begin
   end if;
   return new;
 end;
-$;
+$function$;
 
 drop trigger if exists protect_profile_role on public.profiles;
 create trigger protect_profile_role
