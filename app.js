@@ -57,7 +57,7 @@ function joinGroupModal(){modal('Unirme a un grupo',`<p class="muted">Necesitás
 async function renderRoomMessages(){
  const room=rooms.find(r=>r.id===currentRoom);if(!room)return;
  const host=$('#roomContent');if(!host)return;
- host.innerHTML=\`<div class="row"><div><h3>\${escapeHTML(room.name)}</h3><p class="muted">\${escapeHTML(room.description||'Conversación del grupo')}</p></div><span class="pill">Grupo privado</span></div>
+ host.innerHTML=`<div class="row"><div><h3>${escapeHTML(room.name)}</h3><p class="muted">${escapeHTML(room.description||'Conversación del grupo')}</p></div><span class="pill">Grupo privado</span></div>
  <div id="messages" class="message-list"><div class="loading">Cargando mensajes…</div></div>
  <form id="messageForm" class="chat-composer">
   <div class="composer-tools">
@@ -68,22 +68,22 @@ async function renderRoomMessages(){
   </div>
   <div class="composer-row"><input name="body" maxlength="1000" placeholder="Escribí un mensaje…" autocomplete="off"><button class="btn btn-dark" type="submit">Enviar ➤</button></div>
   <p class="muted composer-hint">Fotos, audios y documentos · Máximo 20 MB por archivo</p>
- </form>\`;
+ </form>`;
  const list=$('#messages');
  const {data,error}=await db.from('messages').select('id,group_id,user_id,body,created_at,attachment_path,attachment_name,attachment_type,attachment_size,message_type,profiles(display_name)').eq('group_id',currentRoom).order('created_at',{ascending:true}).limit(100);
- if(error){list.innerHTML=\`<p class="muted">\${escapeHTML(error.message)}</p>\`;return}
+ if(error){list.innerHTML=`<p class="muted">${escapeHTML(error.message)}</p>`;return}
  const rendered=await Promise.all((data||[]).map(async m=>{
   let attachment='';
   if(m.attachment_path){
    const {data:signed,error:signError}=await db.storage.from('chat-attachments').createSignedUrl(m.attachment_path,3600);
    if(!signError&&signed?.signedUrl){
     const url=escapeHTML(signed.signedUrl),name=escapeHTML(m.attachment_name||'Archivo'),type=m.attachment_type||'';
-    if(type.startsWith('image/'))attachment=\`<a class="attachment-image" href="\${url}" target="_blank" rel="noopener"><img src="\${url}" alt="\${name}" loading="lazy"></a>\`;
-    else if(type.startsWith('audio/'))attachment=\`<div class="attachment-audio">🎧 <span>\${name}</span><audio controls preload="none" src="\${url}"></audio></div>\`;
-    else attachment=\`<a class="attachment-file" href="\${url}" target="_blank" rel="noopener" download="\${name}">📄 <span>\${name}</span> <small>\${formatBytes(m.attachment_size)}</small> ↧</a>\`;
+    if(type.startsWith('image/'))attachment=`<a class="attachment-image" href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="${name}" loading="lazy"></a>`;
+    else if(type.startsWith('audio/'))attachment=`<div class="attachment-audio">🎧 <span>${name}</span><audio controls preload="none" src="${url}"></audio></div>`;
+    else attachment=`<a class="attachment-file" href="${url}" target="_blank" rel="noopener" download="${name}">📄 <span>${name}</span> <small>${formatBytes(m.attachment_size)}</small> ↧</a>`;
    }else attachment='<small class="muted">Adjunto no disponible</small>';
   }
-  return \`<div class="message \${m.user_id===user.id?'mine':''}"><b>\${escapeHTML(m.profiles?.display_name||'Estudiante')}</b>\${m.body?\`<div class="message-body">\${escapeHTML(m.body)}</div>\`:''}\${attachment}<small>\${new Date(m.created_at).toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'})}</small></div>\`;
+  return `<div class="message ${m.user_id===user.id?'mine':''}"><b>${escapeHTML(m.profiles?.display_name||'Estudiante')}</b>${m.body?`<div class="message-body">${escapeHTML(m.body)}</div>`:''}${attachment}<small>${new Date(m.created_at).toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'})}</small></div>`;
  }));
  list.innerHTML=rendered.length?rendered.join(''):'<div class="empty">Todavía no hay mensajes. ¡Saludá al grupo!</div>';list.scrollTop=list.scrollHeight;
  const form=$('#messageForm'),bodyInput=form.elements.body;
@@ -93,7 +93,7 @@ async function renderRoomMessages(){
   const allowed=kind==='image'?['image/jpeg','image/png','image/webp','image/gif']:kind==='audio'?['audio/webm','audio/mp4','audio/mpeg','audio/ogg','audio/wav','audio/aac']:['application/pdf','text/plain','text/csv','application/zip','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint'];
   if(!allowed.includes(file.type)){toast('Ese formato no está permitido.');return}
   const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-100)||'archivo';
-  const path=\`\${currentRoom}/\${user.id}/\${crypto.randomUUID()}-\${safeName}\`;
+  const path=`${currentRoom}/${user.id}/${crypto.randomUUID()}-${safeName}`;
   toast('Subiendo archivo…');
   const {error:uploadError}=await db.storage.from('chat-attachments').upload(path,file,{contentType:file.type,upsert:false});
   if(uploadError){toast('No se pudo subir: '+uploadError.message);return}
