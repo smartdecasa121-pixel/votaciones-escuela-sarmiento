@@ -19,19 +19,26 @@ function authModal(mode='login'){
   const username=String(f.get('username')).trim().toLowerCase();
   const password=String(f.get('password'));
   if(!/^[a-z0-9_.-]{3,20}$/.test(username)){toast('El usuario debe tener entre 3 y 20 caracteres: letras, números, punto, guion o guion bajo.');return}
-  // Supabase Auth requiere un identificador tipo email. Este correo interno ficticio
-  // no pertenece a nadie y nunca se muestra ni se envía; desactivar confirmación por email en Supabase.
-  const internalEmail=username+'@votaciones-escuela.invalid';
+  // Se crea una cuenta confirmada desde una Edge Function segura: no se envían correos.
+  const internalEmail=username+'@votaciones-escuela-sarmiento.com';
   let r;
   if(signup){
-   r=await db.auth.signUp({email:internalEmail,password,options:{data:{username,display_name:String(f.get('name')).trim()}}});
+   const response=await fetch(CONFIG.url+'/functions/v1/send-push',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':CONFIG.anonKey},
+    body:JSON.stringify({action:'signup',username,displayName:String(f.get('name')).trim(),password})
+   });
+   const result=await response.json().catch(()=>({}));
+   if(!response.ok){toast(result.error||'No se pudo crear la cuenta.');return}
+   r=await db.auth.signInWithPassword({email:internalEmail,password});
   }else{
    r=await db.auth.signInWithPassword({email:internalEmail,password});
   }
   if(r.error){toast(r.error.message);return}
   closeModal();
-  if(signup&&!r.data.session)toast('La cuenta se creó, pero falta desactivar la confirmación por correo en Supabase Auth.');
-  else{toast(signup?'¡Cuenta creada!':'¡Bienvenido/a!');await refreshUser();go('inicio')}
+  toast(signup?'¡Cuenta creada!':'¡Bienvenido/a!');
+  await refreshUser();
+  go('inicio')
  };
 }
 async function refreshUser(){const {data:{user:u}}=await db.auth.getUser();user=u;profile=null;if(user){const r=await db.from('profiles').select('user_id,display_name,role,created_at').eq('user_id',user.id).maybeSingle();if(r.error)console.warn(r.error);profile=r.data||{user_id:user.id,display_name:user.user_metadata?.display_name||user.email,role:'student'}}renderAuthUI()}
