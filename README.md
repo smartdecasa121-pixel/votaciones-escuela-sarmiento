@@ -6,7 +6,7 @@ Aplicación web estática para Vercel + Supabase: registro/inicio de sesión con
 
 - Necesitás una cuenta en Supabase y una en Vercel (sus planes gratuitos pueden alcanzar para pruebas escolares, sujetos a límites/cambios del proveedor).
 - **No es un sistema de voto secreto certificado ni debe usarse para elecciones oficiales o decisiones de alto riesgo.** El administrador puede moderar proyectos; los resultados agregados son visibles. La votación es una por cuenta, no una verificación de identidad escolar.
-- No hay fotos, teléfonos ni correos visibles en los perfiles.
+- Los perfiles muestran solo nombre y rol; no se publican teléfonos ni correos. El chat permite mensajes, fotos, audios grabados/adjuntos y documentos con acceso privado por grupo.
 - Nunca publiques una clave `service_role` ni contraseñas de base de datos. La web solo usa la clave pública/anon con RLS activado.
 
 ## Paso 1 — Crear Supabase
@@ -18,6 +18,8 @@ Aplicación web estática para Vercel + Supabase: registro/inicio de sesión con
 5. En **Project Settings → API** (o **Connect**, según la interfaz), copiá la **Project URL** y la clave **publishable/anon**. No copies `service_role` ni `secret key`.
 6. En Authentication → URL Configuration, agregá la URL de Vercel cuando ya la tengas. Para desarrollo, agregá también `http://localhost:3000` si vas a probar con un servidor local.
 7. Para que el chat se actualice en vivo, en Database → Replication/Realtime habilitá la tabla `public.messages`.
+8. En Authentication → Providers → Email, desactivá **Confirm email**: el acceso usa un nombre de usuario convertido internamente a un identificador técnico `@votaciones-escuela.invalid`, no una dirección de correo real.
+9. Después de aplicar el esquema base, ejecutá una sola vez `supabase-media-chat-migration.sql` desde SQL Editor. Crea un bucket privado y las políticas de acceso para los adjuntos.
 
 ## Paso 2 — Configurar la web
 
@@ -55,14 +57,14 @@ Aplicación web estática para Vercel + Supabase: registro/inicio de sesión con
 ## Paso 5 — Crear y habilitar el administrador
 
 1. Abrí la web publicada y registrá tu cuenta con el correo que quieras usar como administradora.
-2. En Supabase, abrí **SQL Editor → New query** y ejecutá esta consulta reemplazando el correo por el tuyo:
+2. En Supabase, abrí **SQL Editor → New query** y ejecutá esta consulta reemplazando `TU_USUARIO` por el nombre de usuario que registraste:
 
    ```sql
    update public.profiles p
    set role = 'admin'
    from auth.users u
    where p.user_id = u.id
-     and lower(u.email) = lower('TU-CORREO@EJEMPLO.COM');
+     and lower(u.raw_user_meta_data->>'username') = lower('TU_USUARIO');
    ```
 
 3. Cerrá sesión en la web y volvé a ingresar. Vas a ver la sección **Administración**, desde donde podés aprobar o rechazar proyectos.
@@ -70,11 +72,12 @@ Aplicación web estática para Vercel + Supabase: registro/inicio de sesión con
 
 ## Paso 6 — Probar todo
 
-1. Registrá dos cuentas distintas (usá correos a los que tengas acceso si la confirmación por correo está activada).
+1. Registrá dos cuentas distintas con nombres de usuario y contraseñas.
 2. Ingresá como administradora, aprobá una propuesta.
 3. Ingresá como estudiante: revisá Candidatos, Votaciones y emití un voto. Volvé a intentar votar: debe bloquearse por cuenta.
 4. Creá un grupo con contraseña desde Grupos; en la segunda cuenta, uníte usando nombre exacto y contraseña; mandá mensajes desde ambas cuentas.
-5. Revisá el sitio desde otro dispositivo/navegador y verificá que los datos persisten.
+5. En un grupo, probá enviar texto, una foto, un audio grabado desde el micrófono y un PDF/documento. Probá abrirlos desde la segunda cuenta y desde otro dispositivo.
+6. Revisá el sitio desde otro dispositivo/navegador y verificá que los datos persisten.
 
 ## Qué incluye y límites conocidos
 
@@ -84,6 +87,7 @@ Aplicación web estática para Vercel + Supabase: registro/inicio de sesión con
 - Voto único por usuario impuesto en PostgreSQL; la interfaz no es la autoridad de seguridad.
 - Conteos agregados de votos, sin exponer filas de votos ajenas.
 - Grupos privados por contraseña (el navegador calcula SHA-256 y la base solo almacena el hash), membresías y chat persistente.
+- Adjuntos del chat en bucket privado: imágenes, notas de voz grabadas desde el navegador, audios adjuntos y documentos. El acceso se controla por pertenencia al grupo; los enlaces de descarga son temporales. Límite configurado: 20 MB por archivo.
 - Políticas RLS en las tablas y funciones RPC para votar/crear/unirse a grupos.
 
 Importante: esta versión es una base funcional para un proyecto escolar y pruebas supervisadas. No incluye recuperación de contraseña personalizada, verificación de identidad de alumnos, moderación automática de chat, auditoría formal, ni secreto criptográfico/certificación electoral. Revisá mensajes y permisos antes de usarla con menores en producción. Para recuperación de contraseña se puede usar el flujo de Supabase Auth.
