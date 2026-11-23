@@ -73,6 +73,7 @@ async function renderRoomMessages(){
  const list=$('#messages');
  const {data,error}=await db.from('messages').select('id,group_id,user_id,body,created_at,attachment_path,attachment_name,attachment_type,attachment_size,message_type,profiles(display_name)').eq('group_id',currentRoom).order('created_at',{ascending:true}).limit(100);
  if(error){list.innerHTML=`<p class="muted">${escapeHTML(error.message)}</p>`;return}
+ const readKey=`vse-read-${user.id}-${currentRoom}`;let previousRead=0;try{previousRead=Number(localStorage.getItem(readKey)||0)}catch(e){}let unreadDividerShown=false;
  const rendered=await Promise.all((data||[]).map(async m=>{
   let attachment='';
   if(m.attachment_path){
@@ -84,9 +85,10 @@ async function renderRoomMessages(){
     else attachment=`<a class="attachment-file" href="${url}" target="_blank" rel="noopener" download="${name}">📄 <span>${name}</span> <small>${formatBytes(m.attachment_size)}</small> ↧</a>`;
    }else attachment='<small class="muted">Adjunto no disponible</small>';
   }
-  return `<div class="message ${m.user_id===user.id?'mine':''}"><b>${escapeHTML(m.profiles?.display_name||'Estudiante')}</b>${m.body?`<div class="message-body">${escapeHTML(m.body)}</div>`:''}${attachment}<small>${new Date(m.created_at).toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'})}</small></div>`;
+  const showUnread=!unreadDividerShown&&previousRead>0&&m.user_id!==user.id&&new Date(m.created_at).getTime()>previousRead;if(showUnread)unreadDividerShown=true;
+  return `${showUnread?'<div class="unread-divider">Mensajes nuevos</div>':''}<div class="message ${m.user_id===user.id?'mine':''}"><b>${escapeHTML(m.profiles?.display_name||'Estudiante')}</b>${m.body?`<div class="message-body">${escapeHTML(m.body)}</div>`:''}${attachment}<small>${new Date(m.created_at).toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'})}</small></div>`;
  }));
- list.innerHTML=rendered.length?rendered.join(''):'<div class="empty">Todavía no hay mensajes. ¡Saludá al grupo!</div>';list.scrollTop=list.scrollHeight;
+ list.innerHTML=rendered.length?rendered.join(''):'<div class="empty">Todavía no hay mensajes. ¡Saludá al grupo!</div>';list.scrollTop=list.scrollHeight;try{localStorage.setItem(readKey,String(Date.now()))}catch(e){}
  const form=$('#messageForm'),bodyInput=form.elements.body;
  async function sendAttachment(file,kind){
   if(!file)return;
