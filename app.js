@@ -170,7 +170,7 @@ async function renderRoomMessages(refreshOnly=false){
    <span id="recordStatus" class="record-status" aria-live="polite"></span>
   </div>
   <div class="composer-row"><input name="body" maxlength="1000" placeholder="Escribí un mensaje…" autocomplete="off"><button class="btn btn-dark" type="submit">Enviar ➤</button></div>
-  <p class="muted composer-hint">Fotos, audios y documentos · Máximo 20 MB por archivo</p>
+  <p class="muted composer-hint">Fotos, audios y documentos · Máximo 50 MB por archivo</p>
  </form>`;
  
  const list=$('#messages');
@@ -197,7 +197,7 @@ async function renderRoomMessages(refreshOnly=false){
  async function sendAttachment(file,kind){
   if(!file)return;
   const activeRoom=rooms.find(r=>r.id===currentRoom);if(activeRoom?.member_permissions?.chat===false&&activeRoom.created_by!==user.id){toast('El dueño desactivó el chat para integrantes.');return}
-  if(file.size>20*1024*1024){toast('El archivo supera el límite de 20 MB.');return}
+  if(file.size>50*1024*1024){toast('El archivo supera el límite de 50 MB.');return}
   const allowed=kind==='image'?['image/jpeg','image/png','image/webp','image/gif']:kind==='audio'?['audio/webm','audio/mp4','audio/mpeg','audio/ogg','audio/wav','audio/aac','audio/x-wav','audio/flac','audio/3gpp','audio/x-m4a']:['application/pdf','text/plain','text/csv','application/zip','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint'];
   if(!allowed.includes(file.type)){toast('Ese formato no está permitido.');return}
   const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-100)||'archivo';
