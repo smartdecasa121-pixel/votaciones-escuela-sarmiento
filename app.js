@@ -102,7 +102,7 @@ async function renderGroups(sequence){
 }
 async function renderGroupWorkspace(){
  const room=rooms.find(r=>r.id===currentRoom);if(!room){currentRoom=null;await renderGroups();return}
- const {count}=await db.from('group_members').select('*',{count:'exact',head:true}).eq('group_id',room.id);
+ const memberCount=await db.rpc('group_member_count',{p_group_id:room.id});const count=memberCount.data??0;
  const head='<div class="group-workspace-head"><button class="btn btn-light btn-small" id="backToGroups">← Mis grupos</button><div class="group-identity"><div class="group-logo large">'+(room.logo_url?'<img src="'+escapeHTML(room.logo_url)+'" alt="">':'💡')+'</div><div><h1>'+escapeHTML(room.name)+'</h1><p>'+escapeHTML(room.description||'')+'</p><small>'+(count??0)+' integrantes · '+(room.visibility==='public'?'Público':'Privado')+'</small></div></div>'+(room.created_by===user.id?'<button class="btn btn-light btn-small" id="ownerGroupSettings">⚙ Configurar grupo</button>':'<button class="btn btn-light btn-small danger" id="leaveGroup">Salir del grupo</button>')+'</div>';
  const tabs=['chat','votaciones','candidatos'].map(t=>'<button data-group-tab="'+t+'" class="'+(currentGroupTab===t?'active':'')+'">'+(t==='chat'?'Chat':t==='votaciones'?'Votaciones':'Candidatos')+'</button>').join('');
  $('#main').innerHTML=titleBlock('Grupos','')+'<div class="group-workspace">'+head+'<nav class="group-tabs">'+tabs+'</nav><section id="groupTabContent" class="panel-card group-tab-content"><div class="loading">Cargando…</div></section></div>';
