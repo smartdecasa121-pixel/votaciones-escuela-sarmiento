@@ -159,7 +159,7 @@ async function ownerGroupSettings(){
 async function renderRoomMessages(refreshOnly=false){
  const room=rooms.find(r=>r.id===currentRoom);if(!room)return;
  const host=$('#roomContent');if(!host)return;
- if(!refreshOnly)host.innerHTML=`<div class="row"><div><h3>${escapeHTML(room.name)}</h3><p class="muted">${escapeHTML(room.description||'Conversación del grupo')}</p></div><div class="row"><span class="pill">Grupo privado</span>${room.created_by===user.id?'<button class="btn btn-light btn-small" id="ownerGroupSettings">⚙ Configurar</button>':'<button class="btn btn-light btn-small" id="leaveGroup">Salir del grupo</button>'}</div></div>
+ if(!refreshOnly)host.innerHTML=`<div class="row"><div><h3>Chat</h3><p class="muted">Conversación del grupo.</p></div></div>
  <div id="messages" class="message-list"><div class="loading">Cargando mensajes…</div></div>
  <form id="messageForm" class="chat-composer">
   <div class="composer-tools">
@@ -172,7 +172,7 @@ async function renderRoomMessages(refreshOnly=false){
   <div class="composer-row"><input name="body" maxlength="1000" placeholder="Escribí un mensaje…" autocomplete="off"><button class="btn btn-dark" type="submit">Enviar ➤</button></div>
   <p class="muted composer-hint">Fotos, audios y documentos · Máximo 20 MB por archivo</p>
  </form>`;
- $('#ownerGroupSettings')?.addEventListener('click',ownerGroupSettings);$('#leaveGroup')?.addEventListener('click',async()=>{if(!confirm('¿Salir de este grupo?'))return;const {error}=await db.from('group_members').delete().eq('group_id',currentRoom).eq('user_id',user.id);if(error){toast(error.message);return}currentRoom=null;toast('Saliste del grupo.');await renderGroups()});
+ 
  const list=$('#messages');
  const {data,error}=await db.from('messages').select('id,group_id,user_id,body,created_at,attachment_path,attachment_name,attachment_type,attachment_size,message_type,profiles(display_name)').eq('group_id',currentRoom).order('created_at',{ascending:true}).limit(100);
  if(error){list.innerHTML=`<p class="muted">${escapeHTML(error.message)}</p>`;return}
@@ -196,6 +196,7 @@ async function renderRoomMessages(refreshOnly=false){
  const form=$('#messageForm'),bodyInput=form.elements.body;
  async function sendAttachment(file,kind){
   if(!file)return;
+  const activeRoom=rooms.find(r=>r.id===currentRoom);if(activeRoom?.member_permissions?.chat===false&&activeRoom.created_by!==user.id){toast('El dueño desactivó el chat para integrantes.');return}
   if(file.size>20*1024*1024){toast('El archivo supera el límite de 20 MB.');return}
   const allowed=kind==='image'?['image/jpeg','image/png','image/webp','image/gif']:kind==='audio'?['audio/webm','audio/mp4','audio/mpeg','audio/ogg','audio/wav','audio/aac','audio/x-wav','audio/flac','audio/3gpp','audio/x-m4a']:['application/pdf','text/plain','text/csv','application/zip','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation','application/msword','application/vnd.ms-excel','application/vnd.ms-powerpoint'];
   if(!allowed.includes(file.type)){toast('Ese formato no está permitido.');return}
@@ -211,7 +212,7 @@ async function renderRoomMessages(refreshOnly=false){
  $('#imageInput').onchange=e=>sendAttachment(e.target.files[0],'image');
  $('#audioInput').onchange=e=>sendAttachment(e.target.files[0],'audio');
  $('#fileInput').onchange=e=>sendAttachment(e.target.files[0],'file');
- form.onsubmit=async e=>{e.preventDefault();const body=bodyInput.value.trim();if(!body)return;const {error}=await db.from('messages').insert({group_id:currentRoom,user_id:user.id,body,message_type:'text'});if(error){toast(error.message);return}bodyInput.value='';await renderRoomMessages()};
+ form.onsubmit=async e=>{e.preventDefault();const activeRoom=rooms.find(r=>r.id===currentRoom);if(activeRoom?.member_permissions?.chat===false&&activeRoom.created_by!==user.id){toast('El dueño desactivó el chat para integrantes.');return}const body=bodyInput.value.trim();if(!body)return;const {error}=await db.from('messages').insert({group_id:currentRoom,user_id:user.id,body,message_type:'text'});if(error){toast(error.message);return}bodyInput.value='';await renderRoomMessages()};
  let recorder=null,chunks=[],recordingStream=null;
  $('#recordBtn').onclick=async()=>{
   const btn=$('#recordBtn'),status=$('#recordStatus');
@@ -345,7 +346,7 @@ function settingsModal(){
    <form id="profileSettingsForm"><div class="field"><label for="settingsDisplayName">Nombre para mostrar</label><input id="settingsDisplayName" name="display_name" maxlength="60" minlength="1" value="${displayName}" required></div><button class="btn btn-dark" type="submit">Guardar nombre</button></form>
   </section>
   <section class="settings-section"><h3>Seguridad</h3><form id="passwordSettingsForm"><div class="field"><label for="settingsPassword">Nueva contraseña</label><input id="settingsPassword" name="password" type="password" minlength="8" maxlength="72" autocomplete="new-password" required placeholder="Mínimo 8 caracteres"></div><button class="btn btn-light" type="submit">Cambiar contraseña</button></form></section>
-  <section class="settings-section"><h3>Idioma</h3><div class="field"><label for="settingsLanguage">Idioma de la cuenta</label><select id="settingsLanguage"><option value="es" '+(language==='es'?'selected':'')+'>Español</option><option value="en" '+(language==='en'?'selected':'')+'>English</option></select></div><button id="saveLanguage" class="btn btn-light" type="button">Guardar idioma</button><p class="muted">La preferencia se guarda en tu cuenta; la traducción completa de la interfaz todavía está pendiente.</p></section>
+  <section class="settings-section"><h3>Idioma</h3><div class="field"><label for="settingsLanguage">Idioma de la cuenta</label><select id="settingsLanguage"><option value="es" ${language==='es'?'selected':''}>Español</option><option value="en" ${language==='en'?'selected':''}>English</option></select></div><button id="saveLanguage" class="btn btn-light" type="button">Guardar idioma</button><p class="muted">La preferencia se guarda en tu cuenta; la traducción completa de la interfaz todavía está pendiente.</p></section>
   <section class="settings-section"><h3>Notificaciones</h3><p class="muted">Administrá los avisos de mensajes y novedades.</p><button id="settingsNotifications" class="btn btn-light" type="button">Administrar notificaciones 🔔</button></section>
   <section class="settings-section"><p class="muted">Tipo de cuenta: <b>${escapeHTML(profile?.role==='admin'?'Administración':'Estudiante')}</b></p><button id="logoutSettings" class="btn btn-light danger" type="button">Cerrar sesión</button></section>`);
  $('#profileSettingsForm').onsubmit=async e=>{
