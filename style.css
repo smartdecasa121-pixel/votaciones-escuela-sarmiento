@@ -26,3 +26,30 @@
 .settings-section form{margin-top:8px}
 .settings-section .field{margin:9px 0 12px}
 .settings-section .btn{margin-top:4px}
+
+
+/* Navegación y espacios de grupo */
+.group-cards{margin-top:18px}
+.group-card{display:flex;align-items:center;gap:14px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:17px;padding:17px;color:var(--ink);box-shadow:var(--shadow);min-width:0;width:100%}
+button.group-card{cursor:pointer}
+.group-card:hover{border-color:#d3b52c;transform:translateY(-1px)}
+.group-logo{width:54px;height:54px;flex:0 0 54px;border-radius:15px;background:#fff3bd;display:grid;place-items:center;font-size:26px;overflow:hidden}
+.group-logo img{width:100%;height:100%;object-fit:cover}
+.group-logo.large{width:68px;height:68px;flex-basis:68px}
+.group-card-info{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
+.group-card-info b{font-size:16px}
+.group-card-info small{color:var(--muted);overflow-wrap:anywhere}
+.group-workspace{display:flex;flex-direction:column;gap:16px}
+.group-workspace-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:17px;padding:18px}
+.group-identity{display:flex;align-items:center;gap:13px;flex:1;min-width:220px}
+.group-identity h1{font-size:23px;margin:0 0 4px}
+.group-identity p{margin:0 0 3px;color:var(--muted);font-size:13px}
+.group-identity small{font-size:11px;color:var(--muted)}
+.group-tabs{display:flex;gap:8px;border-bottom:1px solid var(--line);padding:0 4px;overflow-x:auto}
+.group-tabs button{border:0;background:transparent;padding:13px 17px;font-weight:850;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+.group-tabs button.active{color:var(--ink);border-bottom-color:#e8c52e}
+.group-tab-content{min-height:260px}
+.permission-line{display:flex;align-items:center;gap:9px;margin:10px 0;font-size:14px}
+.permission-line input{accent-color:#c59a00;width:17px;height:17px}
+.group-tab-content .cards-grid{margin-top:18px}
+@media(max-width:680px){.group-workspace-head{align-items:flex-start}.group-identity{order:2;flex-basis:100%}.group-workspace-head>#ownerGroupSettings,.group-workspace-head>#leaveGroup{margin-left:auto}.group-card{padding:13px}}
