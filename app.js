@@ -41,7 +41,7 @@ function authModal(mode='login'){
   go('inicio')
  };
 }
-async function refreshUser(){const {data:{user:u}}=await db.auth.getUser();user=u;profile=null;if(user){const r=await db.from('profiles').select('user_id,display_name,role,created_at,suspended').eq('user_id',user.id).maybeSingle();if(r.error)console.warn(r.error);profile=r.data||{user_id:user.id,display_name:user.user_metadata?.display_name||user.email,role:'student'};if(profile.suspended){await db.auth.signOut();user=null;profile=null;toast('Esta cuenta está suspendida. Contactá a la administración.')}}renderAuthUI()}
+async function refreshUser(){const {data:{user:u}}=await db.auth.getUser();user=u;profile=null;if(user){const r=await db.from('profiles').select('user_id,display_name,role,created_at,suspended,language').eq('user_id',user.id).maybeSingle();if(r.error)console.warn(r.error);profile=r.data||{user_id:user.id,display_name:user.user_metadata?.display_name||user.email,role:'student'};if(profile.suspended){await db.auth.signOut();user=null;profile=null;toast('Esta cuenta está suspendida. Contactá a la administración.')}}renderAuthUI()}
 function renderAuthUI(){$('#userBadge').textContent=user?(profile?.display_name||user.email):'Invitado';$('#authBtn').textContent=user?'Salir':'Ingresar';$$('.admin-only').forEach(x=>x.classList.toggle('hidden',profile?.role!=='admin'))}
 let renderSequence=0;
 function go(view){
@@ -65,7 +65,16 @@ async function renderView(){const sequence=++renderSequence;const main=$('#main'
  if(currentView==='grupos'){if(!user){main.innerHTML=`${titleBlock('Grupos','Creá espacios para organizar ideas y conversar.')}<div class="panel-card"><p>Ingresá para crear un grupo o unirte a uno con contraseña.</p><button class="btn btn-dark" id="groupsLogin">Ingresar</button></div>`;$('#groupsLogin').onclick=()=>authModal('login');return}await renderGroups(sequence);return}
  if(currentView==='admin'){if(profile?.role!=='admin'){main.innerHTML=`${titleBlock('Administración','Esta sección es solo para la cuenta administradora.')}<div class="panel-card">No tenés permisos para entrar acá.</div>`;return}await renderAdmin(sequence);return}
 }
-function candidateModal(){if(!needAuth())return;modal('Proponer un proyecto',`<p class="muted">Las propuestas quedan pendientes hasta que la persona administradora las apruebe. No incluyas teléfonos, correos ni datos personales.</p><form id="candidateForm"><div class="field"><label>Nombre del proyecto</label><input name="title" maxlength="100" required></div><div class="field"><label>¿En qué consiste?</label><textarea name="description" maxlength="1200" required></textarea></div><div class="two-col"><div class="field"><label>Fecha de inicio (opcional)</label><input name="start_date" type="date"></div><div class="field"><label>Fecha de cierre (opcional)</label><input name="end_date" type="date"></div></div><button class="btn btn-dark" type="submit">Enviar propuesta</button></form>`);$('#candidateForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);const data={user_id:user.id,title:String(f.get('title')).trim(),description:String(f.get('description')).trim(),start_date:f.get('start_date')||null,end_date:f.get('end_date')||null,status:'pending'};if(data.start_date&&data.end_date&&data.end_date<data.start_date){toast('La fecha de cierre no puede ser anterior al inicio.');return}const {error}=await db.from('candidates').insert(data);if(error){toast(error.message);return}closeModal();toast('Propuesta enviada para revisión.');renderView()}}
+
+function candidateModal(groupId=currentRoom){
+ if(!needAuth())return;
+ if(!groupId){toast('Primero entrá a un grupo.');return}
+ const room=rooms.find(r=>r.id===groupId);if(!room)return;
+ if(room.member_permissions?.candidates===false&&room.created_by!==user.id){toast('El dueño desactivó las propuestas para integrantes.');return}
+ modal('Proponer un candidato','<p class="muted">La propuesta queda pendiente de aprobación de la administración. Se publicará dentro de '+escapeHTML(room.name)+'.</p><form id="candidateForm"><div class="field"><label>Nombre del proyecto</label><input name="title" maxlength="100" required></div><div class="field"><label>¿En qué consiste?</label><textarea name="description" maxlength="1200" required></textarea></div><div class="two-col"><div class="field"><label>Fecha de inicio</label><input name="start_date" type="date"></div><div class="field"><label>Fecha de cierre</label><input name="end_date" type="date"></div></div><button class="btn btn-dark">Enviar propuesta</button></form>');
+ $('#candidateForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),start=f.get('start_date')||null,end=f.get('end_date')||null;if(start&&end&&end<start){toast('La fecha de cierre no puede ser anterior al inicio.');return}const {error}=await db.from('candidates').insert({group_id:groupId,user_id:user.id,title:String(f.get('title')).trim(),description:String(f.get('description')).trim(),start_date:start,end_date:end,status:'pending'});if(error){toast(error.message);return}closeModal();toast('Propuesta enviada para revisión.');currentGroupTab='candidatos';await renderGroupWorkspace()};
+}
+
 async function vote(id){if(!needAuth())return;const {data,error}=await db.rpc('cast_vote',{candidate_uuid:id});if(error){toast(error.message.includes('already')||error.message.includes('duplicate')?'Ya emitiste tu voto.':error.message);return}toast('¡Voto registrado!');go('votaciones')}
 async function sha256(s){const bytes=new TextEncoder().encode(s);const hash=await crypto.subtle.digest('SHA-256',bytes);return[...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('')}
 
@@ -327,11 +336,13 @@ async function notificationsModal(){
 function settingsModal(){
  if(!user){modal('Configuración','<p class="muted">Iniciá sesión para administrar tu perfil y tus preferencias.</p><button id="loginSettings" class="btn btn-dark">Ingresar</button>');$('#loginSettings')?.addEventListener('click',()=>authModal('login'));return}
  const displayName=escapeHTML(profile?.display_name||'');
+ const language=profile?.language||'es';
  modal('Configuración',`
   <section class="settings-section"><h3>Mi perfil</h3><p class="muted">Este nombre es el que ven tus compañeros en los grupos y proyectos.</p>
    <form id="profileSettingsForm"><div class="field"><label for="settingsDisplayName">Nombre para mostrar</label><input id="settingsDisplayName" name="display_name" maxlength="60" minlength="1" value="${displayName}" required></div><button class="btn btn-dark" type="submit">Guardar nombre</button></form>
   </section>
   <section class="settings-section"><h3>Seguridad</h3><form id="passwordSettingsForm"><div class="field"><label for="settingsPassword">Nueva contraseña</label><input id="settingsPassword" name="password" type="password" minlength="8" maxlength="72" autocomplete="new-password" required placeholder="Mínimo 8 caracteres"></div><button class="btn btn-light" type="submit">Cambiar contraseña</button></form></section>
+  <section class="settings-section"><h3>Idioma</h3><div class="field"><label for="settingsLanguage">Idioma de la cuenta</label><select id="settingsLanguage"><option value="es" '+(language==='es'?'selected':'')+'>Español</option><option value="en" '+(language==='en'?'selected':'')+'>English</option></select></div><button id="saveLanguage" class="btn btn-light" type="button">Guardar idioma</button><p class="muted">La preferencia se guarda en tu cuenta; la traducción completa de la interfaz todavía está pendiente.</p></section>
   <section class="settings-section"><h3>Notificaciones</h3><p class="muted">Administrá los avisos de mensajes y novedades.</p><button id="settingsNotifications" class="btn btn-light" type="button">Administrar notificaciones 🔔</button></section>
   <section class="settings-section"><p class="muted">Tipo de cuenta: <b>${escapeHTML(profile?.role==='admin'?'Administración':'Estudiante')}</b></p><button id="logoutSettings" class="btn btn-light danger" type="button">Cerrar sesión</button></section>`);
  $('#profileSettingsForm').onsubmit=async e=>{
@@ -350,6 +361,7 @@ function settingsModal(){
   if(error){console.error(error);toast('No se pudo cambiar la contraseña: '+error.message);return}
   e.target.reset();toast('Contraseña actualizada correctamente.');
  };
+ $('#saveLanguage').onclick=async()=>{const value=$('#settingsLanguage').value;const {error}=await db.rpc('update_account_language',{p_language:value});if(error){toast(error.message);return}profile.language=value;toast('Idioma guardado.');settingsModal()};
  $('#settingsNotifications').onclick=()=>notificationsModal();
  $('#logoutSettings').onclick=logout;
 }
